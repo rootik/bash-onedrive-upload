@@ -1,0 +1,57 @@
+#!/bin/bash
+
+export script_base_folder=$(dirname "$0")
+export script_base_name=$(basename "$0")
+
+source "${script_base_folder}/onedriveb.cfg"
+source "${script_base_folder}/onedriveb-base"
+
+export json_parser="${script_base_folder}/libs/json/bash-json-parser"
+export debug_mode=0
+
+#unicode supported in bash echo and printf commands since v 4.2
+if [[ ${BASH_VERSION:0:1} -ge 4 && ${BASH_VERSION:2:1} -ge 2 ]]; then
+    PRINTF="printf"
+else
+    # may not work on all systems; needs testing
+    PRINTF=`which printf 2> /dev/null`
+    if [[ $? -ne 0 ]]; then
+	PRINTF="printf"
+    fi
+fi
+export PRINTF
+
+while [[ $# -ge 1 ]]; do
+    case $1 in
+        -h|--help)
+            echo "Usage: ${script_base_name} [OPTIONS] path"
+            echo ""
+            echo "Options:"
+            echo "  -d, --debug   Enable debug mode"
+            echo "  -h, --help    Show this help"
+            exit 0
+            ;;
+        -d|--debug)
+            shift
+            debug_mode=1
+            ;;
+        *)
+            break;
+            ;;
+    esac
+done
+
+curl_discover_uri
+exit_on_error
+
+export api_uri
+export api_resource_id 
+
+function list_folder() {
+    source "${script_base_folder}/onedriveb-base"
+
+    onedrive_list_items "$1"
+}
+export -f list_folder
+
+printf "%s\0" "${@}" | xargs -0 -n2 bash -c 'list_folder "$1"' bash
